@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>atlas на AI.UI — токены, скорость, качество</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--card:#f6f8fa;--a:#8c959f;--b:#0e8a8a;--good:#1a7f37;--bad:#cf222e;--neu:#656d76}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8d96a0;--line:#30363d;--card:#161b22;--a:#6e7681;--b:#2fbfbf;--good:#3fb950;--bad:#f85149;--neu:#8d96a0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1160px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px}
+h2{font-size:20px;margin:44px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 8px}
+h3 span{font-weight:400;color:var(--muted);font-size:13px}
+.sub{color:var(--muted);margin:4px 0 12px}
+.note{color:var(--muted);font-size:13px;margin:8px 0}
+code{font:13px ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--card);padding:1px 5px;border-radius:4px}
+a{color:var(--b)}
+.legend{display:flex;flex-wrap:wrap;gap:18px;align-items:center;color:var(--muted);font-size:13px;margin:10px 0 0}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.sw.a{background:var(--a)}.sw.b{background:var(--b)}.sw.good{background:var(--good)}.sw.bad{background:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-size:28px;font-weight:700;line-height:1.3}
+.kpi .d{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:10px 0}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{font-size:12px;font-weight:600;color:var(--muted);vertical-align:bottom}
+th small{display:block;font-weight:400}
+th:first-child,td:first-child,.l{text-align:left}
+td small{display:block;font-size:12px}
+tr.subrow td:first-child{padding-left:28px;color:var(--muted)}
+.good{color:var(--good);font-weight:600}.bad{color:var(--bad);font-weight:600}.neu{color:var(--neu)}
+.pair{width:180px;display:grid;gap:3px;margin:4px 0 0 auto}
+.pair i{display:block;height:8px;border-radius:2px}
+.pair .ba{background:var(--a)}.pair .bb{background:var(--b)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.dv,.db{display:grid;grid-template-columns:210px 1fr 80px;gap:10px;align-items:center;margin:7px 0;font-size:13px}
+.db{grid-template-columns:230px 1fr 170px}
+.dv-t,.db-t{position:relative;height:14px}
+.dv-z{position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--muted)}
+.dv-b{position:absolute;top:0;height:100%;border-radius:2px}
+.dv-b.good{background:var(--good)}.dv-b.bad{background:var(--bad)}.dv-b.neu{background:var(--neu)}
+.dv-v,.db-v{text-align:right;font-variant-numeric:tabular-nums}
+.db-t{background:repeating-linear-gradient(to right,var(--line) 0 1px,transparent 1px 10%)}
+.db-line{position:absolute;top:6px;height:2px}
+.db-line.good{background:var(--good)}.db-line.bad{background:var(--bad)}.db-line.neu{background:var(--neu)}
+.db-dot{position:absolute;top:2px;width:10px;height:10px;margin-left:-5px;border-radius:50%}
+.db-dot.a{background:var(--a)}.db-dot.b{background:var(--b)}
+.scale{display:grid;grid-template-columns:230px 1fr 170px;gap:10px;font-size:11px;color:var(--muted)}
+.scale span:nth-child(2){display:flex;justify-content:space-between}
+details{border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:10px 0}
+summary{cursor:pointer;font-weight:600}
+ul{padding-left:20px}li{margin:5px 0}
+footer{margin-top:44px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (max-width:860px){.charts{grid-template-columns:1fr}.pair{width:100px}.dv,.db,.scale{grid-template-columns:140px 1fr 70px}.db,.scale{grid-template-columns:140px 1fr 120px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>atlas на AI.UI: токены, скорость, качество</h1>
+  <p class="sub">Замер 24.09.2026, пересчёт по сырым прогонам и оценкам — 25.09.2026. Каждый ответ — свежая headless-сессия
+    агента <code>atlas-scout</code> (Sonnet 5), оценка слепая.</p>
+  <div class="legend">
+    <span><span class="sw a"></span>без atlas</span><span><span class="sw b"></span>с atlas</span>
+    <span><span class="sw good"></span>лучше</span><span><span class="sw bad"></span>хуже</span>
+    <span>Изменение — «с atlas» относительно «без atlas»: для токенов, времени, вызовов и денег минус = экономия, для полноты плюс = лучше.</span>
+  </div>
+</header>
+
+<section>
+  <h2>Финальная версия слоя</h2>
+  <p class="sub">17 вопросов: контрольные Q04–Q06, Q12, Q13 и скрытые наборы N01–N12; по 34 прогона на вариант.</p>
+  <div class="kpis" id="kpis"></div>
+  <p class="note" id="clean"></p>
+  <div class="tw"><table id="final"></table></div>
+</section>
+
+<section>
+  <h2>По типам вопросов</h2>
+  <p class="sub">Среднее на один ответ: без atlas → финальная версия; где финальную версию не запускали — версия 2.</p>
+  <div class="charts">
+    <div><h3>Токены <span>изменение, %</span></h3><div id="ch-tok"></div></div>
+    <div><h3>Время ответа <span>изменение, %</span></h3><div id="ch-time"></div></div>
+  </div>
+  <h3>Полнота фактов <span>баллы из 10: серая точка — без atlas, бирюзовая — с atlas</span></h3>
+  <div class="scale"><span></span><span><i>0</i><i>5</i><i>10</i></span><span></span></div>
+  <div id="ch-rec"></div>
+  <div class="tw"><table id="types"></table></div>
+  <p class="note">¹ Засвечены: слой правили по разбору этих вопросов — полнота завышена, расход честный.<br>
+    ² Финальную версию на них не запускали — цифры версии 2. Версия 1 на «где» была экономнее, но проваливала «что затронет» и планы.</p>
+</section>
+
+<section>
+  <h2>По раундам</h2>
+  <p class="sub">В каждом раунде оба варианта отвечали на одни и те же вопросы; слой между раундами дорабатывали.</p>
+  <div class="tw"><table id="rounds"></table></div>
+  <ul>
+    <li><b>atlas v1</b> (раунд 1): карта <code>AGENTS.md</code>, 17 карточек модулей <code>.claude/rules/atlas/</code>, 6 трасс <code>docs/atlas/</code>, агент <code>atlas-scout</code>.</li>
+    <li><b>atlas v2</b> (раунд 2): + протокол разбора изменений (grep потребителей, вердикт по каждой поверхности, коммиты-образцы),
+      колонка «До существующих» в карте данных, сквозные правила, рецепты — индекс карточек-владельцев.</li>
+    <li><b>atlas финал</b> (раунд 3): + проход по «Инвариантам и граблям» затронутых карточек, шаблон плана
+      (правка · раскатка · совместимость · проверка · документы), раздел «Раскатка в docker», строгая схема <code>roles.json</code> в M-ACCESS.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Качество ответов</h2>
+  <div class="kpis" id="quality"></div>
+  <div class="tw"><table id="qtable"></table></div>
+  <p class="note" id="qnote"></p>
+</section>
+
+<section>
+  <h2>Где atlas не экономит</h2>
+  <ul>
+    <li>Карта <code>AGENTS.md</code> — около 7.5K токенов (13 905 символов) в каждой сессии, даже на тривиальном вопросе.</li>
+    <li>Поэтому простые «где», «строка лога → код» и вопросы вне карты с atlas дороже по токенам и деньгам — красные ячейки в таблице типов.</li>
+    <li>Главный выигрыш — «как работает» (агент читает одну трассу вместо обхода кода) и «что затронет» с docker.
+      Планы изменений стоят примерно столько же, но заметно полнее.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Методика и оговорки</h2>
+  <ul>
+    <li>Вопросы с эталонами (атомарные факты с весами, сумма 10 баллов, доказательства <code>путь:символ</code>) заморожены до построения слоя.
+      Скрытые наборы раундов 2 и 3 писал свежий субагент, который слоя не видел.</li>
+    <li>Ответ — свежая сессия <code>claude -p --agent atlas-scout</code>, только чтение (Read, Grep, Glob, read-only git),
+      <code>--permission-mode dontAsk</code>, <code>--setting-sources project,local</code>, <code>--strict-mcp-config</code>.
+      Без atlas — дерево без файлов слоя: в раунде 1 — до его построения, в раундах 2–3 — отдельный git worktree.</li>
+    <li>По 2 прогона на вопрос и вариант, до 6 параллельно. Оценка слепая: ответы перемешаны под метками, каждая ссылка на код проверена
+      в репозитории, якоря прошлых раундов переоценены вслепую для сверки шкалы.</li>
+    <li>Токены = вход + запись в кэш + чтение кэша + выход; время — <code>duration_ms</code> сессии; стоимость — <code>total_cost_usd</code>
+      (по прейскуранту API, не подписка).</li>
+    <li>Разброс между двумя прогонами одного варианта доходит до 4 баллов: разница по одному вопросу меньше ≈1.5 балла — шум.</li>
+    <li>Время зависит от нагрузки, а варианты частично гонялись в разное время. Итог финальной версии сводит базовые прогоны разных
+      раундов: контрольные — раунд 1, N01–N06 — раунд 2, N07–N12 — раунд 3.</li>
+    <li>Оценщики — та же семья моделей. Цена сопровождения слоя (1–2 недели работы) ещё не измерена.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Приложение: по каждому вопросу</h2>
+  <p class="sub">Среднее двух прогонов; Δ — относительно «без atlas» того же набора.</p>
+  <details><summary>Q01–Q13 — исходный набор (раунд 1; повтор версии 2 и финальной)</summary><div class="tw"><table id="ap-Q"></table></div></details>
+  <details><summary>N01–N06 — скрытый набор раунда 2</summary><div class="tw"><table id="ap-N1"></table></div></details>
+  <details><summary>N07–N12 — скрытый набор раунда 3</summary><div class="tw"><table id="ap-N2"></table></div></details>
+</section>
+
+<footer>
+  Все цифры страница считает в браузере из встроенных сырых данных: <span id="nruns"></span> headless-прогонов
+  (вызовы, токены, время, стоимость) и их слепые оценки (полнота, ссылки, галлюцинации, неверные утверждения).
+  Текстовый отчёт — <a href="EVAL-AI-UI-2026-09-24.md">EVAL-AI-UI-2026-09-24.md</a>; в нём полнота контрольного набора без atlas
+  указана как 85.0%, по оценкам — <span id="ctrlA"></span>.
+</footer>
+</main>
+
+<script>
+const D = {"runs":[{"s":"Q","a":"A","q":"Q01","c":7,"d":20.682,"i":12,"cw":6599,"cr":63350,"o":1581,"usd":0.0549},{"s":"Q","a":"A","q":"Q01","c":7,"d":24.395,"i":14,"cw":17011,"cr":69741,"o":1922,"usd":0.10124},{"s":"Q","a":"A","q":"Q02","c":9,"d":31.999,"i":12,"cw":14712,"cr":63682,"o":2551,"usd":0.09712},{"s":"Q","a":"A","q":"Q02","c":7,"d":22.812,"i":10,"cw":14255,"cr":53087,"o":1950,"usd":0.08716},{"s":"Q","a":"A","q":"Q03","c":8,"d":21.919,"i":12,"cw":10123,"cr":66006,"o":1859,"usd":0.07231},{"s":"Q","a":"A","q":"Q03","c":6,"d":17.965,"i":10,"cw":6710,"cr":48367,"o":1490,"usd":0.05143},{"s":"Q","a":"A","q":"Q04","c":21,"d":76.877,"i":32,"cw":91710,"cr":671745,"o":6543,"usd":0.56668},{"s":"Q","a":"A","q":"Q04","c":33,"d":103.883,"i":44,"cw":67636,"cr":863503,"o":6978,"usd":0.51311},{"s":"Q","a":"A","q":"Q05","c":21,"d":52.202,"i":26,"cw":26210,"cr":278977,"o":4729,"usd":0.20798},{"s":"Q","a":"A","q":"Q05","c":21,"d":86.928,"i":30,"cw":43239,"cr":518056,"o":7033,"usd":0.34696},{"s":"Q","a":"A","q":"Q06","c":22,"d":61.379,"i":28,"cw":51999,"cr":367613,"o":5658,"usd":0.33815},{"s":"Q","a":"A","q":"Q06","c":18,"d":73.349,"i":20,"cw":47804,"cr":278000,"o":4777,"usd":0.29463},{"s":"Q","a":"A","q":"Q07","c":20,"d":69.563,"i":22,"cw":27923,"cr":163255,"o":5146,"usd":0.19585},{"s":"Q","a":"A","q":"Q07","c":17,"d":55.842,"i":24,"cw":35065,"cr":251173,"o":5359,"usd":0.24413},{"s":"Q","a":"A","q":"Q08","c":22,"d":95.726,"i":30,"cw":24723,"cr":309766,"o":9313,"usd":0.25404},{"s":"Q","a":"A","q":"Q08","c":20,"d":84.776,"i":28,"cw":23325,"cr":324904,"o":6788,"usd":0.22622},{"s":"Q","a":"A","q":"Q09","c":17,"d":77.865,"i":18,"cw":19295,"cr":137022,"o":6188,"usd":0.1665},{"s":"Q","a":"A","q":"Q09","c":15,"d":46.72,"i":24,"cw":13653,"cr":184915,"o":4301,"usd":0.13465},{"s":"Q","a":"A","q":"Q10","c":14,"d":66.066,"i":16,"cw":21273,"cr":130937,"o":4690,"usd":0.15821},{"s":"Q","a":"A","q":"Q10","c":9,"d":38.147,"i":14,"cw":9975,"cr":87929,"o":3665,"usd":0.09416},{"s":"Q","a":"A","q":"Q11","c":48,"d":195.865,"i":54,"cw":69587,"cr":1065650,"o":19856,"usd":0.69015},{"s":"Q","a":"A","q":"Q11","c":31,"d":169.133,"i":40,"cw":35665,"cr":478176,"o":13443,"usd":0.37281},{"s":"Q","a":"A","q":"Q12","c":10,"d":24.633,"i":10,"cw":10823,"cr":53932,"o":2103,"usd":0.07513},{"s":"Q","a":"A","q":"Q12","c":6,"d":17.948,"i":10,"cw":10081,"cr":62579,"o":1252,"usd":0.06538},{"s":"Q","a":"A","q":"Q13","c":17,"d":36.911,"i":20,"cw":13882,"cr":129788,"o":3557,"usd":0.1171},{"s":"Q","a":"A","q":"Q13","c":11,"d":39.93,"i":12,"cw":11056,"cr":74643,"o":3070,"usd":0.08988},{"s":"Q","a":"v1","q":"Q01","c":3,"d":14.724,"i":6,"cw":22008,"cr":34898,"o":1261,"usd":0.10763},{"s":"Q","a":"v1","q":"Q01","c":4,"d":14.287,"i":6,"cw":21104,"cr":33859,"o":1268,"usd":0.10388},{"s":"Q","a":"v1","q":"Q02","c":3,"d":13.701,"i":6,"cw":20459,"cr":36253,"o":1182,"usd":0.10092},{"s":"Q","a":"v1","q":"Q02","c":29,"d":125.381,"i":42,"cw":80886,"cr":1024238,"o":11241,"usd":0.64089},{"s":"Q","a":"v1","q":"Q03","c":5,"d":18.457,"i":6,"cw":30930,"cr":34749,"o":1808,"usd":0.14876},{"s":"Q","a":"v1","q":"Q03","c":5,"d":19.445,"i":6,"cw":27987,"cr":33854,"o":1381,"usd":0.13254},{"s":"Q","a":"v1","q":"Q04","c":1,"d":18.957,"i":4,"cw":12076,"cr":23937,"o":1810,"usd":0.0712},{"s":"Q","a":"v1","q":"Q04","c":1,"d":24.131,"i":4,"cw":3302,"cr":32668,"o":2227,"usd":0.04202},{"s":"Q","a":"v1","q":"Q05","c":1,"d":13.505,"i":4,"cw":12589,"cr":23950,"o":1379,"usd":0.06894},{"s":"Q","a":"v1","q":"Q05","c":1,"d":16.271,"i":4,"cw":4027,"cr":32694,"o":1600,"usd":0.03865},{"s":"Q","a":"v1","q":"Q06","c":1,"d":15.531,"i":4,"cw":12889,"cr":23924,"o":1613,"usd":0.07248},{"s":"Q","a":"v1","q":"Q06","c":1,"d":26.608,"i":4,"cw":4050,"cr":32642,"o":2156,"usd":0.0443},{"s":"Q","a":"v1","q":"Q07","c":20,"d":54.515,"i":16,"cw":32313,"cr":175718,"o":5741,"usd":0.22184},{"s":"Q","a":"v1","q":"Q07","c":17,"d":66.574,"i":18,"cw":25725,"cr":228204,"o":6968,"usd":0.21826},{"s":"Q","a":"v1","q":"Q08","c":16,"d":88.389,"i":24,"cw":42895,"cr":418903,"o":6308,"usd":0.31849},{"s":"Q","a":"v1","q":"Q08","c":12,"d":62.282,"i":16,"cw":38034,"cr":280743,"o":6044,"usd":0.26876},{"s":"Q","a":"v1","q":"Q09","c":4,"d":27.322,"i":8,"cw":20232,"cr":68241,"o":1728,"usd":0.11187},{"s":"Q","a":"v1","q":"Q09","c":11,"d":65.549,"i":20,"cw":23717,"cr":267832,"o":3902,"usd":0.18749},{"s":"Q","a":"v1","q":"Q10","c":5,"d":31.845,"i":8,"cw":23863,"cr":69564,"o":2250,"usd":0.13188},{"s":"Q","a":"v1","q":"Q10","c":7,"d":36.132,"i":10,"cw":16761,"cr":113619,"o":3465,"usd":0.12444},{"s":"Q","a":"v1","q":"Q11","c":32,"d":205.903,"i":32,"cw":76272,"cr":784721,"o":20237,"usd":0.66447},{"s":"Q","a":"v1","q":"Q11","c":30,"d":151.957,"i":26,"cw":49790,"cr":540849,"o":12638,"usd":0.43376},{"s":"Q","a":"v1","q":"Q12","c":2,"d":16.404,"i":6,"cw":17350,"cr":44112,"o":1175,"usd":0.08998},{"s":"Q","a":"v1","q":"Q12","c":3,"d":17.795,"i":6,"cw":8980,"cr":53784,"o":1149,"usd":0.05818},{"s":"Q","a":"v1","q":"Q13","c":12,"d":47.088,"i":12,"cw":24069,"cr":114276,"o":4053,"usd":0.15969},{"s":"Q","a":"v1","q":"Q13","c":14,"d":51.829,"i":16,"cw":18556,"cr":200684,"o":5129,"usd":0.16568},{"s":"Q","a":"v2","q":"Q01","c":7,"d":26.87,"i":14,"cw":41560,"cr":179158,"o":2226,"usd":0.22436},{"s":"Q","a":"v2","q":"Q01","c":8,"d":26.695,"i":16,"cw":14080,"cr":173155,"o":2294,"usd":0.11392},{"s":"Q","a":"v2","q":"Q02","c":4,"d":21.03,"i":10,"cw":35681,"cr":79274,"o":1659,"usd":0.17519},{"s":"Q","a":"v2","q":"Q02","c":6,"d":25.717,"i":10,"cw":8866,"cr":97505,"o":2185,"usd":0.07684},{"s":"Q","a":"v2","q":"Q03","c":6,"d":16.51,"i":8,"cw":20610,"cr":64033,"o":1539,"usd":0.11065},{"s":"Q","a":"v2","q":"Q03","c":7,"d":31.606,"i":12,"cw":8014,"cr":119933,"o":1918,"usd":0.07525},{"s":"Q","a":"v2","q":"Q04","c":1,"d":22.554,"i":4,"cw":12318,"cr":24022,"o":1549,"usd":0.06957},{"s":"Q","a":"v2","q":"Q04","c":4,"d":28.172,"i":8,"cw":4832,"cr":73642,"o":2829,"usd":0.06236},{"s":"Q","a":"v2","q":"Q05","c":1,"d":18.817,"i":4,"cw":12868,"cr":24035,"o":1487,"usd":0.07116},{"s":"Q","a":"v2","q":"Q05","c":1,"d":17.009,"i":4,"cw":3844,"cr":32864,"o":1352,"usd":0.03548},{"s":"Q","a":"v2","q":"Q06","c":1,"d":20.43,"i":4,"cw":13065,"cr":24009,"o":2192,"usd":0.07899},{"s":"Q","a":"v2","q":"Q06","c":5,"d":25.975,"i":8,"cw":5643,"cr":74632,"o":2850,"usd":0.06601},{"s":"Q","a":"v2","q":"Q07","c":10,"d":40.058,"i":12,"cw":24894,"cr":132289,"o":3667,"usd":0.16273},{"s":"Q","a":"v2","q":"Q07","c":23,"d":93.25,"i":24,"cw":59995,"cr":427445,"o":9353,"usd":0.41905},{"s":"Q","a":"v2","q":"Q08","c":15,"d":92.146,"i":18,"cw":41173,"cr":286608,"o":7574,"usd":0.29779},{"s":"Q","a":"v2","q":"Q08","c":19,"d":84.162,"i":20,"cw":43334,"cr":277871,"o":8685,"usd":0.3158},{"s":"Q","a":"v2","q":"Q09","c":9,"d":54.46,"i":18,"cw":29139,"cr":218075,"o":4145,"usd":0.20166},{"s":"Q","a":"v2","q":"Q09","c":13,"d":60.419,"i":20,"cw":19584,"cr":272164,"o":4163,"usd":0.17444},{"s":"Q","a":"v2","q":"Q10","c":4,"d":20.454,"i":6,"cw":21736,"cr":43736,"o":1897,"usd":0.11467},{"s":"Q","a":"v2","q":"Q10","c":7,"d":59.162,"i":12,"cw":20245,"cr":145700,"o":4639,"usd":0.15653},{"s":"Q","a":"v2","q":"Q11","c":37,"d":257.188,"i":42,"cw":87275,"cr":1174970,"o":22330,"usd":0.80748},{"s":"Q","a":"v2","q":"Q11","c":27,"d":257.225,"i":28,"cw":54998,"cr":589252,"o":23063,"usd":0.56853},{"s":"Q","a":"v2","q":"Q12","c":2,"d":9.229,"i":6,"cw":13680,"cr":40852,"o":813,"usd":0.07103},{"s":"Q","a":"v2","q":"Q12","c":2,"d":12.214,"i":6,"cw":4602,"cr":49675,"o":667,"usd":0.03503},{"s":"Q","a":"v2","q":"Q13","c":14,"d":44.068,"i":16,"cw":27075,"cr":193817,"o":4527,"usd":0.19237},{"s":"Q","a":"v2","q":"Q13","c":16,"d":49.543,"i":18,"cw":20452,"cr":228543,"o":4824,"usd":0.17579},{"s":"Q","a":"fin","q":"Q04","c":6,"d":43.521,"i":10,"cw":15007,"cr":87783,"o":3376,"usd":0.11136},{"s":"Q","a":"fin","q":"Q04","c":4,"d":31.14,"i":8,"cw":4485,"cr":74681,"o":2380,"usd":0.05669},{"s":"Q","a":"fin","q":"Q05","c":1,"d":14.645,"i":4,"cw":13087,"cr":24429,"o":1387,"usd":0.07111},{"s":"Q","a":"fin","q":"Q05","c":3,"d":26.721,"i":8,"cw":8666,"cr":75644,"o":1949,"usd":0.0693},{"s":"Q","a":"fin","q":"Q06","c":4,"d":44.192,"i":8,"cw":14740,"cr":67137,"o":2786,"usd":0.10026},{"s":"Q","a":"fin","q":"Q06","c":1,"d":20.038,"i":4,"cw":13460,"cr":24403,"o":2260,"usd":0.08133},{"s":"Q","a":"fin","q":"Q12","c":2,"d":5.57,"i":4,"cw":10545,"cr":24355,"o":474,"usd":0.0518},{"s":"Q","a":"fin","q":"Q12","c":2,"d":7.833,"i":6,"cw":4639,"cr":50894,"o":705,"usd":0.0358},{"s":"Q","a":"fin","q":"Q13","c":10,"d":34.509,"i":10,"cw":16789,"cr":86884,"o":2760,"usd":0.11215},{"s":"Q","a":"fin","q":"Q13","c":12,"d":78.532,"i":16,"cw":22719,"cr":220986,"o":5780,"usd":0.19291},{"s":"N1","a":"A","q":"N01","c":29,"d":153.593,"i":42,"cw":82221,"cr":967414,"o":13262,"usd":0.65507},{"s":"N1","a":"A","q":"N01","c":45,"d":156.496,"i":60,"cw":88542,"cr":1601888,"o":13722,"usd":0.81189},{"s":"N1","a":"A","q":"N02","c":18,"d":82.735,"i":22,"cw":41250,"cr":224394,"o":7654,"usd":0.28646},{"s":"N1","a":"A","q":"N02","c":16,"d":72.644,"i":20,"cw":29870,"cr":193163,"o":6281,"usd":0.22096},{"s":"N1","a":"A","q":"N03","c":20,"d":79.262,"i":22,"cw":44087,"cr":250537,"o":7169,"usd":0.29819},{"s":"N1","a":"A","q":"N03","c":35,"d":192.857,"i":38,"cw":60317,"cr":715057,"o":17328,"usd":0.55764},{"s":"N1","a":"A","q":"N04","c":36,"d":150.121,"i":56,"cw":38993,"cr":878860,"o":12685,"usd":0.45871},{"s":"N1","a":"A","q":"N04","c":24,"d":136.887,"i":30,"cw":46213,"cr":446867,"o":10066,"usd":0.37495},{"s":"N1","a":"A","q":"N05","c":30,"d":147.319,"i":42,"cw":84513,"cr":1202437,"o":12071,"usd":0.69933},{"s":"N1","a":"A","q":"N05","c":22,"d":220.268,"i":30,"cw":81899,"cr":685623,"o":16152,"usd":0.6263},{"s":"N1","a":"A","q":"N06","c":16,"d":50.617,"i":20,"cw":16151,"cr":155178,"o":4798,"usd":0.14366},{"s":"N1","a":"A","q":"N06","c":23,"d":84.412,"i":26,"cw":30847,"cr":320660,"o":7931,"usd":0.26688},{"s":"N1","a":"v2","q":"N01","c":22,"d":88.45,"i":22,"cw":48299,"cr":389559,"o":8070,"usd":0.35185},{"s":"N1","a":"v2","q":"N01","c":28,"d":142.677,"i":32,"cw":91136,"cr":937962,"o":13062,"usd":0.68282},{"s":"N1","a":"v2","q":"N02","c":13,"d":69.58,"i":16,"cw":32394,"cr":220331,"o":6143,"usd":0.2351},{"s":"N1","a":"v2","q":"N02","c":15,"d":53.921,"i":18,"cw":26476,"cr":281761,"o":5139,"usd":0.21368},{"s":"N1","a":"v2","q":"N03","c":38,"d":204.402,"i":30,"cw":58539,"cr":617054,"o":18379,"usd":0.54142},{"s":"N1","a":"v2","q":"N03","c":41,"d":151.41,"i":38,"cw":52679,"cr":842764,"o":15235,"usd":0.53169},{"s":"N1","a":"v2","q":"N04","c":22,"d":129.363,"i":28,"cw":44312,"cr":514528,"o":9235,"usd":0.37256},{"s":"N1","a":"v2","q":"N04","c":23,"d":132.149,"i":24,"cw":47975,"cr":482609,"o":9219,"usd":0.38066},{"s":"N1","a":"v2","q":"N05","c":25,"d":143.218,"i":30,"cw":58434,"cr":599209,"o":11054,"usd":0.46418},{"s":"N1","a":"v2","q":"N05","c":37,"d":186.734,"i":44,"cw":56297,"cr":958807,"o":17034,"usd":0.58738},{"s":"N1","a":"v2","q":"N06","c":10,"d":125.704,"i":16,"cw":34708,"cr":212316,"o":9595,"usd":0.27728},{"s":"N1","a":"v2","q":"N06","c":8,"d":78.116,"i":10,"cw":19805,"cr":112707,"o":6083,"usd":0.16261},{"s":"N1","a":"fin","q":"N01","c":21,"d":138.244,"i":24,"cw":70706,"cr":542396,"o":10199,"usd":0.49334},{"s":"N1","a":"fin","q":"N01","c":16,"d":139.422,"i":18,"cw":76114,"cr":361281,"o":12555,"usd":0.5023},{"s":"N1","a":"fin","q":"N02","c":19,"d":115.244,"i":24,"cw":48043,"cr":399631,"o":7969,"usd":0.35184},{"s":"N1","a":"fin","q":"N02","c":13,"d":64.633,"i":18,"cw":36606,"cr":227343,"o":5811,"usd":0.25004},{"s":"N1","a":"fin","q":"N03","c":20,"d":129.503,"i":22,"cw":58260,"cr":410363,"o":10861,"usd":0.42377},{"s":"N1","a":"fin","q":"N03","c":17,"d":127.698,"i":22,"cw":51751,"cr":371508,"o":9927,"usd":0.38062},{"s":"N1","a":"fin","q":"N04","c":24,"d":144.603,"i":34,"cw":56937,"cr":743284,"o":13404,"usd":0.51051},{"s":"N1","a":"fin","q":"N04","c":25,"d":217.39,"i":30,"cw":62488,"cr":728020,"o":15760,"usd":0.55322},{"s":"N1","a":"fin","q":"N05","c":45,"d":275.994,"i":52,"cw":91279,"cr":1245085,"o":24816,"usd":0.8624},{"s":"N1","a":"fin","q":"N05","c":18,"d":152.752,"i":24,"cw":71417,"cr":689958,"o":13161,"usd":0.55532},{"s":"N1","a":"fin","q":"N06","c":12,"d":114.239,"i":18,"cw":33465,"cr":241002,"o":8667,"usd":0.26877},{"s":"N1","a":"fin","q":"N06","c":14,"d":74.04,"i":16,"cw":47951,"cr":273951,"o":6590,"usd":0.31253},{"s":"N2","a":"A","q":"N07","c":36,"d":102.243,"i":30,"cw":41500,"cr":435025,"o":7606,"usd":0.32913},{"s":"N2","a":"A","q":"N07","c":21,"d":109.395,"i":20,"cw":39922,"cr":250459,"o":8892,"usd":0.29874},{"s":"N2","a":"A","q":"N08","c":27,"d":130.844,"i":42,"cw":38754,"cr":547998,"o":10833,"usd":0.37303},{"s":"N2","a":"A","q":"N08","c":37,"d":117.399,"i":40,"cw":37380,"cr":553317,"o":11127,"usd":0.37153},{"s":"N2","a":"A","q":"N09","c":44,"d":258.975,"i":56,"cw":102328,"cr":1486490,"o":22312,"usd":0.92984},{"s":"N2","a":"A","q":"N09","c":33,"d":218.145,"i":38,"cw":68888,"cr":778861,"o":18204,"usd":0.61344},{"s":"N2","a":"A","q":"N10","c":36,"d":162.008,"i":40,"cw":44272,"cr":623002,"o":15473,"usd":0.4565},{"s":"N2","a":"A","q":"N10","c":34,"d":151.863,"i":44,"cw":48728,"cr":689359,"o":13793,"usd":0.4708},{"s":"N2","a":"A","q":"N11","c":23,"d":111.464,"i":32,"cw":27265,"cr":318115,"o":7529,"usd":0.24804},{"s":"N2","a":"A","q":"N11","c":20,"d":111.058,"i":28,"cw":33908,"cr":339794,"o":10105,"usd":0.3047},{"s":"N2","a":"A","q":"N12","c":25,"d":201.603,"i":34,"cw":50341,"cr":489839,"o":14066,"usd":0.44006},{"s":"N2","a":"A","q":"N12","c":21,"d":130.641,"i":30,"cw":34322,"cr":405564,"o":8724,"usd":0.3057},{"s":"N2","a":"fin","q":"N07","c":22,"d":103.146,"i":18,"cw":40914,"cr":268863,"o":10332,"usd":0.32078},{"s":"N2","a":"fin","q":"N07","c":23,"d":86.654,"i":24,"cw":40736,"cr":397614,"o":8244,"usd":0.32495},{"s":"N2","a":"fin","q":"N08","c":26,"d":124.101,"i":36,"cw":45409,"cr":619590,"o":11768,"usd":0.42331},{"s":"N2","a":"fin","q":"N08","c":27,"d":126.223,"i":30,"cw":33982,"cr":524061,"o":12125,"usd":0.36205},{"s":"N2","a":"fin","q":"N09","c":33,"d":227.367,"i":50,"cw":73217,"cr":1231279,"o":21080,"usd":0.75002},{"s":"N2","a":"fin","q":"N09","c":28,"d":182.22,"i":38,"cw":60995,"cr":924694,"o":16913,"usd":0.59812},{"s":"N2","a":"fin","q":"N10","c":18,"d":96.646,"i":22,"cw":38669,"cr":303577,"o":9588,"usd":0.31132},{"s":"N2","a":"fin","q":"N10","c":10,"d":58.306,"i":12,"cw":20354,"cr":155000,"o":5737,"usd":0.16981},{"s":"N2","a":"fin","q":"N11","c":12,"d":108.131,"i":20,"cw":37834,"cr":291014,"o":7920,"usd":0.28878},{"s":"N2","a":"fin","q":"N11","c":10,"d":69.749,"i":14,"cw":20458,"cr":171112,"o":5127,"usd":0.16735},{"s":"N2","a":"fin","q":"N12","c":13,"d":97.529,"i":18,"cw":32702,"cr":234719,"o":8590,"usd":0.26369},{"s":"N2","a":"fin","q":"N12","c":10,"d":117.163,"i":12,"cw":27670,"cr":152745,"o":8516,"usd":0.22641}],"recall":{"Q":{"A":{"Q01":7.75,"Q02":10,"Q03":4.5,"Q04":8.875,"Q05":8.875,"Q06":7.875,"Q07":8.875,"Q08":8.5,"Q09":8.375,"Q10":8.75,"Q11":8.875,"Q12":3.75,"Q13":10},"v1":{"Q01":8.5,"Q02":9.75,"Q03":7.5,"Q04":9,"Q05":9.5,"Q06":7.5,"Q07":8.125,"Q08":7,"Q09":7.75,"Q10":9,"Q11":6.875,"Q12":5,"Q13":9.375},"v2":{"Q01":8,"Q02":9.5,"Q03":7.5,"Q04":9.125,"Q05":10,"Q06":7.5,"Q07":8.125,"Q08":8.5,"Q09":8,"Q10":8.375,"Q11":8.75,"Q12":5.5,"Q13":10},"fin":{"Q04":9,"Q05":10,"Q06":7.875,"Q12":5,"Q13":10}},"N1":{"A":{"N01":6.875,"N02":6.625,"N03":8.75,"N04":7.625,"N05":7.625,"N06":9.25},"v2":{"N01":8.875,"N02":9.625,"N03":9,"N04":7.5,"N05":7.75,"N06":9.5},"fin":{"N01":8.25,"N02":9.625,"N03":9,"N04":9.25,"N05":8.5,"N06":9.25}},"N2":{"fin":{"N07":9.625,"N08":8.25,"N09":8,"N10":10,"N11":6.125,"N12":8.75},"A":{"N07":7.5,"N08":7,"N09":6.625,"N10":9.125,"N11":5.5,"N12":8.5}}},"quality":{"Q":{"A":{"n":26,"refs":368,"hall":4,"wrong":14,"trapPass":2,"trapN":2},"v1":{"n":26,"refs":332,"hall":1,"wrong":12,"trapPass":2,"trapN":2},"v2":{"n":26,"refs":422,"hall":2,"wrong":10,"trapPass":2,"trapN":2},"fin":{"n":10,"refs":204,"hall":0,"wrong":1,"trapPass":2,"trapN":2}},"N1":{"A":{"n":12,"refs":304,"hall":8,"wrong":8,"trapPass":0,"trapN":0},"v2":{"n":12,"refs":338,"hall":1,"wrong":6,"trapPass":0,"trapN":0},"fin":{"n":12,"refs":311,"hall":2,"wrong":5,"trapPass":0,"trapN":0}},"N2":{"fin":{"n":12,"refs":322,"hall":1,"wrong":5,"trapPass":0,"trapN":0},"A":{"n":12,"refs":325,"hall":2,"wrong":4,"trapPass":0,"trapN":0}}}};
+
+const MINUS = '−';
+const ARM = { A: 'без atlas', v1: 'atlas v1', v2: 'atlas v2', fin: 'atlas финал' };
+const QT = {
+  Q01: 'где', Q02: 'где', Q03: 'где', Q04: 'как работает', Q05: 'как работает', Q06: 'как работает',
+  Q07: 'что затронет', Q08: 'что затронет', Q09: 'лог → код', Q10: 'лог → код', Q11: 'план',
+  Q12: 'ловушка доки', Q13: 'вне карты',
+  N01: 'что затронет', N02: 'что затронет', N03: 'что затронет', N04: 'план', N05: 'план', N06: 'план',
+  N07: 'план', N08: 'план', N09: 'план', N10: 'что затронет + docker', N11: 'что затронет + docker', N12: 'что затронет + docker',
+};
+const CONTROL = ['Q04', 'Q05', 'Q06', 'Q12', 'Q13'];
+
+const sgn = x => x > 0 ? '+' : x < 0 ? MINUS : '±';
+const tok = r => r.i + r.cw + r.cr + r.o;
+const sum = (xs, f) => xs.reduce((t, x) => t + f(x), 0);
+const mean = (xs, f) => sum(xs, f) / xs.length;
+const median = (xs, f) => {
+  const v = xs.map(f).sort((p, q) => p - q), n = v.length;
+  return n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
+};
+const sel = (s, a, qs) => D.runs.filter(r => r.s === s && r.a === a && (!qs || qs.includes(r.q)));
+// средняя полнота по вопросам (0–10); parts — [набор, вариант, вопросы?]
+const recOf = parts => {
+  let t = 0, n = 0;
+  for (const [s, a, qs] of parts) for (const q of qs || Object.keys(D.recall[s][a])) { t += D.recall[s][a][q]; n++; }
+  return t / n;
+};
+const st = rs => ({
+  n: rs.length,
+  tokSum: sum(rs, tok), tokMed: median(rs, tok), tokMean: mean(rs, tok),
+  cr: sum(rs, r => r.cr), cw: sum(rs, r => r.cw), out: sum(rs, r => r.o),
+  cSum: sum(rs, r => r.c), cMed: median(rs, r => r.c), cMean: mean(rs, r => r.c),
+  dSum: sum(rs, r => r.d), dMed: median(rs, r => r.d), dMean: mean(rs, r => r.d),
+  usd: sum(rs, r => r.usd), usdMean: mean(rs, r => r.usd),
+});
+
+const F = {
+  tok: v => v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v / 1e3) + 'K',
+  n: v => String(Math.round(v * 10) / 10),
+  s: v => Math.round(v) + ' с',
+  usd: v => '$' + v.toFixed(v < 1 ? 3 : 2),
+  pct: v => v.toFixed(1) + '%',
+  sc: v => v.toFixed(2),
+};
+const cls = g => g > 0 ? 'good' : g < 0 ? 'bad' : 'neu';
+
+// kind: less — меньше лучше, %; time — то же + «×N» при ускорении от 1.5 раза; pp — п.п.; pts — баллы; cnt — разность
+function delta(a, b, kind) {
+  let txt, g;
+  if (kind === 'pp' || kind === 'pts') {
+    const d = b - a;
+    txt = sgn(d) + Math.abs(d).toFixed(kind === 'pp' ? 1 : 2) + (kind === 'pp' ? ' п.п.' : '');
+    g = Math.abs(d) < (kind === 'pp' ? 0.5 : 0.1) ? 0 : Math.sign(d);
+  } else if (kind === 'cnt') {
+    const d = b - a;
+    txt = d === 0 ? '0' : sgn(d) + Math.abs(d);
+    g = -Math.sign(d);
+  } else {
+    const p = Math.round((b / a - 1) * 100);
+    txt = p === 0 ? '0%' : sgn(p) + Math.abs(p) + '%';
+    if (kind === 'time' && a / b >= 1.5) txt += ' · ×' + (a / b).toFixed(1);
+    g = Math.abs(p) <= 2 ? 0 : -Math.sign(p);
+  }
+  return `<span class="${cls(g)}">${txt}</span>`;
+}
+const bars = (a, b) => {
+  const m = Math.max(a, b);
+  return `<div class="pair"><i class="ba" style="width:${a / m * 100}%"></i><i class="bb" style="width:${b / m * 100}%"></i></div>`;
+};
+const cell = (a, b, f, k) => `<td>${F[f](a)} → ${F[f](b)}<small>${delta(a, b, k)}</small></td>`;
+const $ = id => document.getElementById(id);
+
+// ---- финальная версия: 17 вопросов
+const finA = [...sel('Q', 'A', CONTROL), ...sel('N1', 'A'), ...sel('N2', 'A')];
+const finB = [...sel('Q', 'fin'), ...sel('N1', 'fin'), ...sel('N2', 'fin')];
+const SA = st(finA), SB = st(finB);
+const rA = recOf([['Q', 'A', CONTROL], ['N1', 'A'], ['N2', 'A']]) * 10;
+const rB = recOf([['Q', 'fin'], ['N1', 'fin'], ['N2', 'fin']]) * 10;
+
+// галлюцинации: основные сравнения трёх раундов
+const QA = [D.quality.Q.A, D.quality.N1.A, D.quality.N2.A];
+const QB = [D.quality.Q.v1, D.quality.N1.v2, D.quality.N2.fin];
+const hA = sum(QA, x => x.hall), fA = sum(QA, x => x.refs), hB = sum(QB, x => x.hall), fB = sum(QB, x => x.refs);
+const hallX = (hA / fA) / (hB / fB);
+
+const kpi = (l, v, d) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+$('kpis').innerHTML = [
+  kpi('Токены', delta(SA.tokSum, SB.tokSum, 'less'), `${F.tok(SA.tokSum)} → ${F.tok(SB.tokSum)}`),
+  kpi('Вызовы инструментов', delta(SA.cSum, SB.cSum, 'less'), `${F.n(SA.cSum)} → ${F.n(SB.cSum)}`),
+  kpi('Время', delta(SA.dSum, SB.dSum, 'less'), `${F.s(SA.dSum)} → ${F.s(SB.dSum)}`),
+  kpi('Стоимость', delta(SA.usd, SB.usd, 'less'), `${F.usd(SA.usd)} → ${F.usd(SB.usd)}`),
+  kpi('Полнота фактов', delta(rA, rB, 'pp'), `${F.pct(rA)} → ${F.pct(rB)}`),
+  kpi('Галлюцинации', `<span class="good">в ${hallX.toFixed(1)} раза</span>`, `меньше: ${F.pct(hA / fA * 100)} → ${F.pct(hB / fB * 100)} ссылок, все раунды`),
+].join('');
+
+const cA = st([...sel('Q', 'A', CONTROL), ...sel('N2', 'A')]), cB = st([...sel('Q', 'fin'), ...sel('N2', 'fin')]);
+const crA = recOf([['Q', 'A', CONTROL], ['N2', 'A']]) * 10, crB = recOf([['Q', 'fin'], ['N2', 'fin']]) * 10;
+$('clean').innerHTML = `Только 11 вопросов, по которым слой не правили (без N01–N06): токены ${delta(cA.tokSum, cB.tokSum, 'less')},
+  вызовы ${delta(cA.cSum, cB.cSum, 'less')}, время ${delta(cA.dSum, cB.dSum, 'less')}, стоимость ${delta(cA.usd, cB.usd, 'less')},
+  полнота ${F.pct(crA)} → ${F.pct(crB)} (${delta(crA, crB, 'pp')}).`;
+
+const rowsF = [
+  ['Токены, сумма', SA.tokSum, SB.tokSum, 'tok', 'less'],
+  ['чтение кэша', SA.cr, SB.cr, 'tok', 'less', 1],
+  ['запись в кэш', SA.cw, SB.cw, 'tok', 'less', 1],
+  ['выходные', SA.out, SB.out, 'tok', 'less', 1],
+  ['Токены на ответ, медиана', SA.tokMed, SB.tokMed, 'tok', 'less'],
+  ['Вызовы инструментов, сумма', SA.cSum, SB.cSum, 'n', 'less'],
+  ['Вызовы на ответ, медиана', SA.cMed, SB.cMed, 'n', 'less'],
+  ['Время, сумма', SA.dSum, SB.dSum, 's', 'time'],
+  ['Время ответа, медиана', SA.dMed, SB.dMed, 's', 'time'],
+  ['Стоимость', SA.usd, SB.usd, 'usd', 'less'],
+  ['Полнота фактов', rA, rB, 'pct', 'pp'],
+];
+$('final').innerHTML = '<tr><th>Метрика</th><th>Без atlas</th><th>С atlas</th><th>Изменение</th><th></th></tr>'
+  + rowsF.map(([l, a, b, f, k, sub]) => `<tr${sub ? ' class="subrow"' : ''}><td>${l}</td><td>${F[f](a)}</td><td>${F[f](b)}</td><td>${delta(a, b, k)}</td><td>${bars(a, b)}</td></tr>`).join('');
+
+// ---- по типам вопросов
+const TYPES = [
+  { l: 'Как работает', s: 'Q', qs: ['Q04', 'Q05', 'Q06'], b: 'fin' },
+  { l: 'Ловушка устаревшей доки', s: 'Q', qs: ['Q12'], b: 'fin' },
+  { l: 'Что затронет, с docker (скрытые)', s: 'N2', qs: ['N10', 'N11', 'N12'], b: 'fin' },
+  { l: 'Что затронет¹', s: 'N1', qs: ['N01', 'N02', 'N03'], b: 'fin' },
+  { l: 'Планы изменений (скрытые)', s: 'N2', qs: ['N07', 'N08', 'N09'], b: 'fin' },
+  { l: 'Планы изменений¹', s: 'N1', qs: ['N04', 'N05', 'N06'], b: 'fin' },
+  { l: 'Вне карты (вендорный UI)', s: 'Q', qs: ['Q13'], b: 'fin' },
+  { l: 'Где, по симптому дефекта²', s: 'Q', qs: ['Q01', 'Q02', 'Q03'], b: 'v2' },
+  { l: 'Строка лога → код²', s: 'Q', qs: ['Q09', 'Q10'], b: 'v2' },
+].map(t => ({ ...t, A: st(sel(t.s, 'A', t.qs)), B: st(sel(t.s, t.b, t.qs)), rA: recOf([[t.s, 'A', t.qs]]), rB: recOf([[t.s, t.b, t.qs]]) }));
+
+const pc = (a, b) => Math.round((b / a - 1) * 100);
+function divChart(id, items) {
+  $(id).innerHTML = items.map(({ l, p }) => {
+    const w = Math.min(Math.abs(p), 100) / 2, c = cls(Math.abs(p) <= 2 ? 0 : -Math.sign(p));
+    const pos = p < 0 ? `right:50%;width:${w}%` : `left:50%;width:${w}%`;
+    return `<div class="dv"><span>${l}</span><span class="dv-t"><i class="dv-z"></i><i class="dv-b ${c}" style="${pos}"></i></span>`
+      + `<span class="dv-v ${c}">${p === 0 ? '0' : sgn(p) + Math.abs(p)}%</span></div>`;
+  }).join('');
+}
+divChart('ch-tok', TYPES.map(t => ({ l: t.l, p: pc(t.A.tokMean, t.B.tokMean) })));
+divChart('ch-time', TYPES.map(t => ({ l: t.l, p: pc(t.A.dMean, t.B.dMean) })));
+$('ch-rec').innerHTML = TYPES.map(({ l, rA: a, rB: b }) => {
+  const d = b - a, c = cls(Math.abs(d) < 0.1 ? 0 : Math.sign(d)), lo = Math.min(a, b) * 10, hi = Math.max(a, b) * 10;
+  return `<div class="db"><span>${l}</span><span class="db-t"><i class="db-line ${c}" style="left:${lo}%;width:${hi - lo}%"></i>`
+    + `<i class="db-dot a" style="left:${a * 10}%"></i><i class="db-dot b" style="left:${b * 10}%"></i></span>`
+    + `<span class="db-v">${F.sc(a)} → ${F.sc(b)} ${delta(a, b, 'pts')}</span></div>`;
+}).join('');
+
+const span = qs => qs.length > 1 ? `${qs[0]}–${qs[qs.length - 1]}` : qs[0];
+$('types').innerHTML = '<tr><th>Тип вопроса</th><th>Вопросы</th><th>Версия</th><th>Токены</th><th>Время</th><th>Вызовы</th><th>Стоимость</th><th>Полнота, из 10</th></tr>'
+  + TYPES.map(t => `<tr><td>${t.l}</td><td>${span(t.qs)}</td><td>${ARM[t.b]}</td>${cell(t.A.tokMean, t.B.tokMean, 'tok', 'less')}`
+    + `${cell(t.A.dMean, t.B.dMean, 's', 'time')}${cell(t.A.cMean, t.B.cMean, 'n', 'less')}${cell(t.A.usdMean, t.B.usdMean, 'usd', 'less')}`
+    + `${cell(t.rA, t.rB, 'sc', 'pts')}</tr>`).join('');
+
+// ---- по раундам
+const RS = [
+  { l: 'Раунд 1', d: 'исходные Q01–Q13 · atlas v1', s: 'Q', b: 'v1' },
+  { l: 'Раунд 2', d: 'скрытые N01–N06 · atlas v2', s: 'N1', b: 'v2' },
+  { l: 'Раунд 3', d: 'скрытые N07–N12 · финал', s: 'N2', b: 'fin' },
+].map(r => ({ ...r, A: st(sel(r.s, 'A')), B: st(sel(r.s, r.b)), rA: recOf([[r.s, 'A']]) * 10, rB: recOf([[r.s, r.b]]) * 10,
+  qA: D.quality[r.s].A, qB: D.quality[r.s][r.b] }));
+const RROWS = [
+  ['Токены на ответ, медиана', r => [r.A.tokMed, r.B.tokMed], 'tok', 'less'],
+  ['Токены, сумма', r => [r.A.tokSum, r.B.tokSum], 'tok', 'less'],
+  ['Время ответа, медиана', r => [r.A.dMed, r.B.dMed], 's', 'time'],
+  ['Время, сумма', r => [r.A.dSum, r.B.dSum], 's', 'time'],
+  ['Вызовы на ответ, медиана', r => [r.A.cMed, r.B.cMed], 'n', 'less'],
+  ['Вызовы, сумма', r => [r.A.cSum, r.B.cSum], 'n', 'less'],
+  ['Стоимость', r => [r.A.usd, r.B.usd], 'usd', 'less'],
+  ['Полнота фактов', r => [r.rA, r.rB], 'pct', 'pp'],
+  ['Неверные утверждения', r => [r.qA.wrong, r.qB.wrong], 'n', 'cnt'],
+];
+const hallCell = (a, b) => `<td>${a.hall} из ${a.refs} → ${b.hall} из ${b.refs}<small>${F.pct(a.hall / a.refs * 100)} → ${F.pct(b.hall / b.refs * 100)}</small></td>`;
+$('rounds').innerHTML = `<tr><th>Метрика</th>${RS.map(r => `<th>${r.l}<small>${r.d} · ${r.A.n}+${r.B.n} прогонов</small></th>`).join('')}</tr>`
+  + RROWS.map(([l, f, u, k]) => `<tr><td>${l}</td>${RS.map(r => cell(...f(r), u, k)).join('')}</tr>`).join('')
+  + `<tr><td>Галлюцинации, ссылок</td>${RS.map(r => hallCell(r.qA, r.qB)).join('')}</tr>`;
+
+// ---- качество
+const all = (s, a) => D.quality[s][a];
+const finQ = [all('Q', 'fin'), all('N1', 'fin'), all('N2', 'fin')];
+const wA = sum(QA, x => x.wrong), wB = sum(QB, x => x.wrong);
+const trap = q => `${q.trapPass}/${q.trapN}`;
+$('quality').innerHTML = [
+  kpi('Галлюцинации, все раунды', `<span class="good">в ${hallX.toFixed(1)} раза</span>`, `меньше: ${hA} из ${fA} → ${hB} из ${fB} ссылок`),
+  kpi('Галлюцинации, финальная версия', (sum(finQ, x => x.hall) / sum(finQ, x => x.refs) * 100).toFixed(2) + '%', `${sum(finQ, x => x.hall)} из ${sum(finQ, x => x.refs)} ссылок`),
+  kpi('Неверные утверждения', `${wA} → ${wB}`, 'сумма трёх раундов — на равных'),
+  kpi('Ловушка устаревшей доки', `${trap(all('Q', 'A'))} и ${trap(all('Q', 'v1'))}`, `пройдена без atlas и с atlas; v2 — ${trap(all('Q', 'v2'))}, финал — ${trap(all('Q', 'fin'))}`),
+].join('');
+const QROWS = [
+  ['Q', 'A', 'Q01–Q13'], ['Q', 'v1', 'Q01–Q13'], ['Q', 'v2', 'Q01–Q13, повтор'], ['Q', 'fin', 'Q04–Q06, Q12, Q13'],
+  ['N1', 'A', 'N01–N06'], ['N1', 'v2', 'N01–N06'], ['N1', 'fin', 'N01–N06, повтор¹'],
+  ['N2', 'A', 'N07–N12'], ['N2', 'fin', 'N07–N12'],
+];
+$('qtable').innerHTML = '<tr><th>Вопросы</th><th class="l">Вариант</th><th>Ответов</th><th>Ссылок на код</th><th>Галлюцинаций</th><th>Доля</th><th>Неверных утверждений</th><th>Полнота</th></tr>'
+  + QROWS.map(([s, a, l]) => { const q = all(s, a);
+    return `<tr><td>${l}</td><td class="l">${ARM[a]}</td><td>${q.n}</td><td>${q.refs}</td><td>${q.hall}</td><td>${F.pct(q.hall / q.refs * 100)}</td><td>${q.wrong}</td><td>${F.pct(recOf([[s, a]]) * 10)}</td></tr>`; }).join('');
+const ctrlA = F.pct(recOf([['Q', 'A', CONTROL]]) * 10);
+$('qnote').innerHTML = `Галлюцинация — ссылка на несуществующий путь или символ. На пяти контрольных вопросах без atlas полнота ${ctrlA}
+  (финальная версия — ${F.pct(recOf([['Q', 'fin']]) * 10)}). ¹ Засвечены.`;
+
+// ---- приложение
+function appendix(id, s, arms) {
+  const qs = [...new Set(D.runs.filter(r => r.s === s).map(r => r.q))].sort();
+  let h = '<tr><th>Вопрос</th><th class="l">Тип</th><th class="l">Вариант</th><th>Вызовы</th><th>Токены</th><th>Время</th><th>Стоимость</th><th>Полнота</th><th>Δ токенов</th><th>Δ полноты</th></tr>';
+  for (const q of qs) {
+    const av = arms.filter(a => sel(s, a, [q]).length), base = st(sel(s, 'A', [q])), rb = D.recall[s].A[q];
+    av.forEach((a, i) => {
+      const x = st(sel(s, a, [q])), r = D.recall[s][a]?.[q];
+      h += `<tr>${i ? '' : `<td rowspan="${av.length}">${q}</td><td class="l" rowspan="${av.length}">${QT[q]}</td>`}<td class="l">${ARM[a]}</td>`
+        + `<td>${F.n(x.cMean)}</td><td>${F.tok(x.tokMean)}</td><td>${F.s(x.dMean)}</td><td>${F.usd(x.usdMean)}</td><td>${r == null ? '—' : F.sc(r)}</td>`
+        + `<td>${a === 'A' ? '' : delta(base.tokMean, x.tokMean, 'less')}</td><td>${a === 'A' || r == null ? '' : delta(rb, r, 'pts')}</td></tr>`;
+    });
+  }
+  $(id).innerHTML = h;
+}
+appendix('ap-Q', 'Q', ['A', 'v1', 'v2', 'fin']);
+appendix('ap-N1', 'N1', ['A', 'v2', 'fin']);
+appendix('ap-N2', 'N2', ['A', 'fin']);
+
+$('nruns').textContent = D.runs.length;
+$('ctrlA').textContent = ctrlA;
+</script>
+</body>
+</html>
