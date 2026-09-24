@@ -1,0 +1,6 @@
+{
+  "name": "atlas",
+  "version": "1.0.0",
+  "description": "Лёгкий слой понимания проекта для агентов (наследник GRACE): L0-карта AGENTS.md, карточки модулей .claude/rules/atlas (подмешиваются при чтении файлов модуля), трассы сценариев docs/atlas, поисковый субагент atlas-scout. atlas-init строит слой по существующему коду без правки исходников, atlas-sync догоняет его по git diff.",
+  "author": { "name": "alepri51" }
+}

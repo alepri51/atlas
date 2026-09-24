@@ -1,0 +1,12 @@
+{
+  "name": "atlas",
+  "owner": { "name": "alepri51" },
+  "plugins": [
+    {
+      "name": "atlas",
+      "source": "./",
+      "description": "Лёгкий слой понимания проекта для агентов: карта AGENTS.md, карточки модулей, трассы, atlas-scout; atlas-init / atlas-sync.",
+      "version": "1.0.0"
+    }
+  ]
+}
